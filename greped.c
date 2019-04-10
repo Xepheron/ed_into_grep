@@ -1,14 +1,53 @@
 #include "greped.h"
-int main(int argc, const char *argv[]) {
-  zero = (unsigned *)malloc(nlall * sizeof(unsigned));  //tfname = mkdtemp(tmpXXXXX);
-  if(argc>2){
-    grep_read(argv[2]);
+  int main(int argc, const char *argv[]) {
+  if (argc != 3) {
+    fprintf(stderr, "Usage: ./grep searchre file(s)\n");
+    exit(ARGC_ERROR);
   }
-  else {printf("No File\n"); return -1;}
-  strcpy(expbuf,argv[1]);
-  //global(1);
-    printf("%s",genbuf);
-   return 0;
+  zero = (unsigned *)malloc(nlall * sizeof(unsigned));
+  tfname = mktemp(tmpXXXXX);
+  init();
+  if(argc>3){
+    for(int i=2;i<argc;i++){
+      search_file(argv[i],argv[1]);
+    }
+  }
+  else{ process_dir(argv[2],argv[1],&search_file);}
+  printf("\nquitting...\n");
+  exit(1);
+  return 0;
+}
+void search_file(const char* filename, const char* searchfor) {
+  printf("\n");  //drawline();  drawline();
+  printf("%s:\n", filename); // drawline();
+  grep_read(filename);
+  search(searchfor);
+}
+int getch_(void) {
+  char c = (bufp > 0) ? buf[--bufp] : getchar();
+  lastc = c & 0177;
+  return lastc;
+}
+void ungetch_(int c) {
+  if (bufp >= BUFSIZE) {
+    printf("ungetch: overflow\n");
+  }  else {
+    buf[bufp++] = c;
+  }
+}
+void process_dir(const char* dir, const char* searchfor, void (*fp)(const char*, const char*)) {
+  if (strchr(dir, '*') == NULL) {
+    search_file(dir, searchfor);  return; }  // search one file
+
+        // or search a directory of files using glob()
+  glob_t results;  memset(&results, 0, sizeof(results));  glob(dir, 0, NULL, &results);
+  //drawline();  drawline();  drawline();
+  printf("processing files in %s...\n\n", dir);
+  for (int i = 0; i < results.gl_pathc; ++i) {
+    const char* filename = results.gl_pathv[i];
+    fp(filename, searchfor);    // function ptr to function that reads and searches a file
+  }
+  globfree(&results);
 }
 void grep_read(const char* c){
   setnoaddr();
@@ -28,8 +67,30 @@ void grep_read(const char* c){
   ninbuf = 0;
   append(getfile, addr2);
   exfile();
-  //fchange = c;
 }
+void printcommand(void) {  int c;  char lastsep;
+  for (;;) {  unsigned int* a1;
+    if (pflag) { pflag = 0;  addr1 = addr2 = dot;  print(); }  c = '\n';
+    for (addr1 = 0;;) {  lastsep = c;  a1 = address();  c = getchr();
+      if (c != ',' && c != ';') { break; }  if (lastsep==',') { error(Q); }
+      if (a1==0) {  a1 = zero+1;  if (a1 > dol) { a1--; }  }  addr1 = a1;  if (c == ';') { dot = a1; }
+    }
+    if (lastsep != '\n' && a1 == 0) { a1 = dol; }
+    if ((addr2 = a1)==0) { given = 0;  addr2 = dot;  } else { given = 1; }  if (addr1==0) { addr1 = addr2; }
+    switch(c) {
+      case 'p':  case 'P':  newline();  print();  continue;
+      case EOF:  default:  return;
+    }
+  }
+}
+void search(const char* re) {
+  char buf[GBSIZE];
+  snprintf(buf, sizeof(buf), "/%s\n", re);  // / and \n very important
+  //drawline();
+  printf("g%s", buf);  const char* p = buf + strlen(buf) - 1;
+  while (p >= buf) { ungetch_(*p--); }  global(1);
+}
+
 unsigned int* address(void) {  int sign;  unsigned int *a, *b;  int opcnt, nextopand;  int c;
   nextopand = -1;  sign = 1;  opcnt = 0;  a = dot;
   do {
