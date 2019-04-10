@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
-
+#include <glob.h>
 const int BLKSIZE = 4096;  const int NBLK = 2047;  const int FNSIZE = 128;  const int LBSIZE = 4096;
 const int ESIZE = 256; const int GBSIZE = 256;  const int NBRA = 5;  const int KSIZE = 9;  const int CBRA = 1;
 const int CCHR = 2;  const int CDOT = 4;  const int CCL = 6;  const int NCCL = 8;  const int CDOL = 10;
@@ -32,8 +32,8 @@ int gettty(void);  int gety(void);  void global(int k);  void init(void);  void 
 void onhup(int); char *place(char *sp, char *l1, char *l2);  void print(void);  void putchr_(int ac);
 void putd(void);  void putfile(void);  int putline(void);  void puts_(char *sp); void quit(int n);
  void reverse(unsigned int *a1, unsigned int *a2);
-void setwide(void);  void setnoaddr(void);  void squeeze(int);
-void grep_read(const char*);
-jmp_buf  savej;
-char grepbuf[GBSIZE];
+void setwide(void);  void setnoaddr(void);  void squeeze(int);void grep_read(const char*);jmp_buf  savej;char grepbuf[GBSIZE];
 void greperror(char);  void grepline(void);
+void search(const char* re);
+int getch_(void);
+void search_file(const char* filename, const char* searchfor);void process_dir(const char* dir, const char* searchfor, void (*fp)(const char*, const char*));void printcommand(void);
