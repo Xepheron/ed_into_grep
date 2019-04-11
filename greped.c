@@ -11,6 +11,7 @@ int main(int argc, char *argv[]) {
   for(int i=2; i<argc;i++){
     search_file(argv[i],argv[1]);
   }
+  }
   else{
     process_dir(argv[2],argv[1],&search_file);
   }
@@ -20,7 +21,7 @@ int main(int argc, char *argv[]) {
 
 int getch_(void) {
   char c = (bufp > 0) ? buf[--bufp] : getchar();
-  lastc = c & 0177;   printf("getch_(): %c\n", lastc);
+  lastc = c & 0177;  
   return lastc;
 }
 void ungetch_(int c) {
@@ -38,7 +39,7 @@ void search(const char* re) {
 }
 void search_file(const char* filename, const char* searchfor) {
   printf("\n");  printf("processing %s...\n", filename);
-  readfile(filename);
+  grep_read(filename);
   search(searchfor);
 }
 void process_dir(const char* dir, const char* searchfor, void (*fp)(const char*, const char*)) {
@@ -84,13 +85,6 @@ void printcommand(void) {  int c;  char lastsep;
       case EOF:  default:  return;
     }
   }
-}
-void search(const char* re) {
-  char buf[GBSIZE];
-  snprintf(buf, sizeof(buf), "/%s\n", re);  // / and \n very important
-  //drawline();
-  printf("g%s", buf);  const char* p = buf + strlen(buf) - 1;
-  while (p >= buf) { ungetch_(*p--); }  global(1);
 }
 
 unsigned int* address(void) {  int sign;  unsigned int *a, *b;  int opcnt, nextopand;  int c;
@@ -168,138 +162,39 @@ int cclass(char *set, int c, int af) {  int n;  if (c == 0) { return(0); }  n = 
   while (--n) { if (*set++ == c) { return(af); } }  return(!af);
 }
 
-void compile(int eof) {
-	int c;
-	char *ep;
-	char *lastep;
-	char bracket[NBRA], *bracketp;
-	int cclcnt;
-
-	ep = expbuf;
-	bracketp = bracket;
-	if ((c = getchr()) == '\n') {
-		peekc = c;
-		c = eof;
-	}
-	if (c == eof) {
-		if (*ep==0)
-			error(Q);
-		return;
-	}
-	nbra = 0;
-	if (c=='^') {
-		c = getchr();
-		*ep++ = CCIRC;
-	}
-	peekc = c;
-	lastep = 0;
-	for (;;) {
-		if (ep >= &expbuf[ESIZE])
-			goto cerror;
-		c = getchr();
-		if (c == '\n') {
-			peekc = c;
-			c = eof;
-		}
-		if (c==eof) {
-			if (bracketp != bracket)
-				goto cerror;
-			*ep++ = CEOF;
-			return;
-		}
-		if (c!='*')
-			lastep = ep;
-		switch (c) {
-
-		case '\\':
-			if ((c = getchr())=='(') {
-				if (nbra >= NBRA)
-					goto cerror;
-				*bracketp++ = nbra;
-				*ep++ = CBRA;
-				*ep++ = nbra++;
-				continue;
-			}
-			if (c == ')') {
-				if (bracketp <= bracket)
-					goto cerror;
-				*ep++ = CKET;
-				*ep++ = *--bracketp;
-				continue;
-			}
-			if (c>='1' && c<'1'+NBRA) {
-				*ep++ = CBACK;
-				*ep++ = c-'1';
-				continue;
-			}
-			*ep++ = CCHR;
-			if (c=='\n')
-				goto cerror;
-			*ep++ = c;
-			continue;
-
-		case '.':
-			*ep++ = CDOT;
-			continue;
-
-		case '\n':
-			goto cerror;
-
-		case '*':
-			if (lastep==0 || *lastep==CBRA || *lastep==CKET)
-				goto defchar;
-			*lastep |= STAR;
-			continue;
-
-		case '$':
-			if ((peekc=getchr()) != eof && peekc!='\n')
-				goto defchar;
-			*ep++ = CDOL;
-			continue;
-
-		case '[':
-			*ep++ = CCL;
-			*ep++ = 0;
-			cclcnt = 1;
-			if ((c=getchr()) == '^') {
-				c = getchr();
-				ep[-2] = NCCL;
-			}
-			do {
-				if (c=='\n')
-					goto cerror;
-				if (c=='-' && ep[-1]!=0) {
-					if ((c=getchr())==']') {
-						*ep++ = '-';
-						cclcnt++;
-						break;
-					}
-					while (ep[-1]<c) {
-						*ep = ep[-1]+1;
-						ep++;
-						cclcnt++;
-						if (ep>=&expbuf[ESIZE])
-							goto cerror;
-					}
-				}
-				*ep++ = c;
-				cclcnt++;
-				if (ep >= &expbuf[ESIZE])
-					goto cerror;
-			} while ((c = getchr()) != ']');
-			lastep[1] = cclcnt;
-			continue;
-
-		defchar:
-		default:
-			*ep++ = CCHR;
-			*ep++ = c;
-		}
-	}
-   cerror:
-	expbuf[0] = 0;
-	nbra = 0;
-	error(Q);
+void compile(int eof) {  int c, cclcnt;  char *ep = expbuf, *lastep, bracket[NBRA], *bracketp = bracket;
+  if ((c = getchr()) == '\n') { peekc = c;  c = eof; }
+  if (c == eof) {  if (*ep==0) { error(Q); }  return; }
+  nbra = 0;  if (c=='^') { c = getchr();  *ep++ = CCIRC; }  peekc = c;  lastep = 0;
+  for (;;) {
+    if (ep >= &expbuf[ESIZE]) { expbuf[0] = 0;  nbra = 0;  error(Q); break; }  c = getchr();  if (c == '\n') { peekc = c;  c = eof; }
+    if (c==eof) { if (bracketp != bracket) { expbuf[0] = 0;  nbra = 0;  error(Q);break; }  *ep++ = CEOF;  return;  }
+    if (c!='*') { lastep = ep; }
+    switch (c) {
+      case '\\':
+        if ((c = getchr())=='(') {
+          if (nbra >= NBRA) { expbuf[0] = 0;  nbra = 0;  error(Q); break; }  *bracketp++ = nbra;  *ep++ = CBRA;  *ep++ = nbra++;  continue;
+        }
+        if (c == ')') {  if (bracketp <= bracket) { expbuf[0] = 0;  nbra = 0;  error(Q);break; }  *ep++ = CKET;  *ep++ = *--bracketp;  continue; }
+        if (c>='1' && c<'1'+NBRA) { *ep++ = CBACK;  *ep++ = c-'1';  continue; }
+        *ep++ = CCHR;  if (c=='\n') { expbuf[0] = 0;  nbra = 0;  error(Q); break;}  *ep++ = c;  continue;
+      case '.': *ep++ = CDOT;  continue;
+      case '\n':  expbuf[0] = 0;  nbra = 0;  error(Q);break;
+      case '*':  if (lastep==0 || *lastep==CBRA || *lastep==CKET) {expbuf[0] = 0;  nbra = 0;  error(Q);break; }  *lastep |= STAR; continue;
+      case '$':  if ((peekc=getchr()) != eof && peekc!='\n') { expbuf[0] = 0;  nbra = 0;  error(Q);break; }  *ep++ = CDOL;  continue;
+      case '[':  *ep++ = CCL;  *ep++ = 0;  cclcnt = 1;  if ((c=getchr()) == '^') {  c = getchr();  ep[-2] = NCCL; }
+        do {
+          if (c=='\n') { expbuf[0] = 0;  nbra = 0;  error(Q); break;}  if (c=='-' && ep[-1]!=0) {
+            if ((c=getchr())==']') { *ep++ = '-';  cclcnt++;  break; }
+            while (ep[-1] < c) {  *ep = ep[-1] + 1;  ep++;  cclcnt++;  if (ep >= &expbuf[ESIZE]) { expbuf[0] = 0;  nbra = 0;  error(Q); break;} }
+          }
+          *ep++ = c;  cclcnt++;  if (ep >= &expbuf[ESIZE]) {expbuf[0] = 0;  nbra = 0;  error(Q); break;}
+        } while ((c = getchr()) != ']');
+        lastep[1] = cclcnt;  continue;
+        default:  *ep++ = CCHR;  *ep++ = c;
+    }
+  }
+}
 }
 
 void error(char *s) {  int c;  wrapp = 0;  listf = 0;  listn = 0;  putchr_('?');  puts_(s);
@@ -320,7 +215,7 @@ int execute(unsigned int *addr) {  char *p1, *p2 = expbuf;  int c;
   }
   do {  /* regular algorithm */   if (advance(p1, p2)) {  loc1 = p1;  return(1);  }  } while (*p1++);  return(0);
 }
-void exfile(void) {  close(io);  io = -1;  if (vflag) {  putd();  putchr_('\n'); }  }
+void exfile(void) {  close(io);  io = -1;  if (vflag) {  /*putd(); */ putchr_('\n'); }  }
 void filename(const char* filein) {
   strcpy(file,filein);
   strcpy(savedfile,filein);
@@ -370,42 +265,21 @@ char* getline_blk(unsigned int tl) {  char *bp, *lp;  int nl;  lp = linebuf;  bp
 int getnum(void) { int r = 0, c;
   while ((c = getchr())>='0' && c <= '9') { r = r * 10 + c - '0'; }  peekc = c;  return (r);
 }
-void global(int k) {
-	char *gp;
-	int c;
-	unsigned int *a1;
-	char globuf[GBSIZE];
-
-	if (globp)
-		error(Q);
-	setwide();
-	squeeze(dol>zero);
-	//if ((c=getchr())=='\n')
-	//	error(Q);
-	//compile(c);
-	gp = globuf;
-	while ((c = getchr()) != '\n') {
-		if (c==EOF)
-			error(Q);
-		if (c=='\\') {
-			c = getchr();
-			if (c!='\n')
-				*gp++ = '\\';
-		}
-		*gp++ = c;
-		if (gp >= &globuf[GBSIZE-2])
-			error(Q);
-	}
-	if (gp == globuf)
-		*gp++ = 'p';
-	*gp++ = '\n';
-	*gp++ = 0;
-	for (a1=zero; a1<=dol; a1++) {
-		*a1 &= ~01;
-		if (a1>=addr1 && a1<=addr2 && execute(a1)==k)
-			*a1 |= 01;
-	}
+void global(int k) {  char *gp;  int c;  unsigned int *a1;  char globuf[GBSIZE];
+  if (globp) { error(Q); }  setwide();  squeeze(dol > zero);
+  if ((c = getchr()) == '\n') { error(Q); }  compile(c);  gp = globuf;
+  while ((c = getchr()) != '\n') {
+    if (c == EOF) { error(Q); }
+    if (c == '\\') {  c = getchr();  if (c != '\n') { *gp++ = '\\'; }  }
+    *gp++ = c;  if (gp >= &globuf[GBSIZE-2]) { error(Q); }
+  }
+  if (gp == globuf) { *gp++ = 'p'; }  *gp++ = '\n';  *gp++ = 0;
+  for (a1 = zero; a1 <= dol; a1++) {  *a1 &= ~01;  if (a1>=addr1 && a1<=addr2 && execute(a1)==k) { *a1 |= 01; } }
+  for (a1 = zero; a1 <= dol; a1++) {
+    if (*a1 & 01) {  *a1 &= ~01;  dot = a1;  globp = globuf;  printcommand();  a1 = zero; }
+  }
 }
+
 void greperror(char c) {  getchr();  /* throw away '\n' */
   snprintf(grepbuf, sizeof(grepbuf), "\'%c\' is a non-grep command", c);  puts_(grepbuf);  }
 void grepline(void) {
