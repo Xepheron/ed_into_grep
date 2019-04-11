@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 
 int getch_(void) {
   char c = (bufp > 0) ? buf[--bufp] : getchar();
-  lastc = c & 0177;  
+  lastc = c & 0177;
   return lastc;
 }
 void ungetch_(int c) {
@@ -180,8 +180,8 @@ void compile(int eof) {  int c, cclcnt;  char *ep = expbuf, *lastep, bracket[NBR
         *ep++ = CCHR;  if (c=='\n') { expbuf[0] = 0;  nbra = 0;  error(Q); break;}  *ep++ = c;  continue;
       case '.': *ep++ = CDOT;  continue;
       case '\n':  expbuf[0] = 0;  nbra = 0;  error(Q);break;
-      case '*':  if (lastep==0 || *lastep==CBRA || *lastep==CKET) {expbuf[0] = 0;  nbra = 0;  error(Q);break; }  *lastep |= STAR; continue;
-      case '$':  if ((peekc=getchr()) != eof && peekc!='\n') { expbuf[0] = 0;  nbra = 0;  error(Q);break; }  *ep++ = CDOL;  continue;
+      case '*':  if (lastep==0 || *lastep==CBRA || *lastep==CKET) {*ep++ = CCHR;  *ep++ = c; error(Q);break; }  *lastep |= STAR; continue;
+      case '$':  if ((peekc=getchr()) != eof && peekc!='\n') { *ep++ = CCHR;  *ep++ = c; break; }  *ep++ = CDOL;  continue;
       case '[':  *ep++ = CCL;  *ep++ = 0;  cclcnt = 1;  if ((c=getchr()) == '^') {  c = getchr();  ep[-2] = NCCL; }
         do {
           if (c=='\n') { expbuf[0] = 0;  nbra = 0;  error(Q); break;}  if (c=='-' && ep[-1]!=0) {
@@ -194,7 +194,6 @@ void compile(int eof) {  int c, cclcnt;  char *ep = expbuf, *lastep, bracket[NBR
         default:  *ep++ = CCHR;  *ep++ = c;
     }
   }
-}
 }
 
 void error(char *s) {  int c;  wrapp = 0;  listf = 0;  listn = 0;  putchr_('?');  puts_(s);
