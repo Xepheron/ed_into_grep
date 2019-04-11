@@ -1,26 +1,26 @@
 #include "greped.h"
-int main(int argc, char *argv[]) {    // not complete, assumes one directory, or one file
-  if (argc < 3) { fprintf(stderr, "Usage: ./grep searchre file(s)\n");  exit(ARGC_ERROR);
-  } else {
-    zero = (unsigned *)malloc(nlall * sizeof(unsigned));  tfname = mktemp(tmpXXXXX);  init();
-    const char* search_for = argv[1];
-    process_dir(argv[2], search_for, search_file); // search_file: fn that reads and searches
+int main(int argc, char *argv[]) {
+  printf("%s",argv[2]);
+  if (argc != 3) {
+    fprintf(stderr, "Usage: ./grep searchre file(s)\n");
   }
-  printf("\n");
-  drawline();  printf("quitting...\n");  exit(1);
+  zero = (unsigned *)malloc(nlall * sizeof(unsigned));
+  tfname = mktemp(tmpXXXXX);
+  init();
+  if(argc>3){
+  for(int i=2; i<argc;i++){
+    search_file(argv[i],argv[1]);
+  }
+  else{
+    process_dir(argv[2],argv[1],&search_file);
+  }
+  exit(1);
+  return 0;
 }
-#define BUFSIZE 100
-char buf[BUFSIZE];
-int bufp = 0;
 
 int getch_(void) {
   char c = (bufp > 0) ? buf[--bufp] : getchar();
-  lastc = c & 0177;
-//  if (lastc == '\n') {  // uncomment if you want to see the chars
-//    printf("getch(): newline\n");
-//  } else {
-/     printf("getch_(): %c\n", lastc);
-// }
+  lastc = c & 0177;   printf("getch_(): %c\n", lastc);
   return lastc;
 }
 void ungetch_(int c) {
@@ -32,22 +32,19 @@ void ungetch_(int c) {
 }
 void search(const char* re) {
   char buf[GBSIZE];
-  snprintf(buf, sizeof(buf), "/%s\n", re);  // / and \n very important
-  drawline();
+  snprintf(buf, sizeof(buf), "/%s\n", re);
   printf("g%s", buf);  const char* p = buf + strlen(buf) - 1;
   while (p >= buf) { ungetch_(*p--); }  global(1);
 }
 void search_file(const char* filename, const char* searchfor) {
-  printf("\n");  drawline();  drawline();  printf("processing %s...\n", filename);  drawline();
+  printf("\n");  printf("processing %s...\n", filename);
   readfile(filename);
   search(searchfor);
 }
 void process_dir(const char* dir, const char* searchfor, void (*fp)(const char*, const char*)) {
   if (strchr(dir, '*') == NULL) {  search_file(dir, searchfor);  return; }  // search one file
-
-        // or search a directory of files using glob()
   glob_t results;  memset(&results, 0, sizeof(results));  glob(dir, 0, NULL, &results);
-  drawline();  drawline();  drawline();  printf("processing files in %s...\n\n", dir);
+   printf("processing files in %s...\n\n", dir);
   for (int i = 0; i < results.gl_pathc; ++i) {
     const char* filename = results.gl_pathv[i];
     fp(filename, searchfor);    // function ptr to function that reads and searches a file
@@ -350,9 +347,7 @@ int getchr(void) {  char c;
      globp = 0;
      return(EOF);
    }
-  if (read(0, &c, 1) <= 0) { return(lastc = EOF); }
-  lastc = c&0177;  return(lastc);
-
+   return getch_();
 }
 int getfile(void) {  int c;  char *lp = linebuf, *fp = nextip;
   do {

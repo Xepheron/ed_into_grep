@@ -12,6 +12,9 @@ const int CCHR = 2;  const int CDOT = 4;  const int CCL = 6;  const int NCCL = 8
 const int CEOF = 11;  const int CKET = 12;  const int CBACK = 14;  const int CCIRC = 15;  const int STAR = 01;
 const int READ = 0;  const int WRITE = 1;  /* const int EOF = -1; */
 
+#define BUFSIZE 100
+char buf[BUFSIZE];
+int bufp = 0;
 int  peekc, lastc, given, ninbuf, io, pflag;
 int  vflag  = 1, oflag, listf, listn, col, tfile  = -1, tline, iblock  = -1, oblock  = -1, ichanged, nleft;
 int  names[26], anymarks, nbra, subnewa, subolda, fchange, wrapp, bpagesize = 20;
